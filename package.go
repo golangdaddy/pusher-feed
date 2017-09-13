@@ -13,15 +13,12 @@ const (
 	CONST_PUBLISH_ENDPOINT = "https://us1.pusherplatform.io/services/feeds/v1/%s/feeds/%s/items"
 )
 
-func buildUrl(instanceId, feedId string) string {
-	return fmt.Sprintf(CONST_PUBLISH_ENDPOINT, instanceId, feedId)
-}
-
 type Payload struct {
 	Items []interface{} `json:"items"`
 }
 
 type Client struct {
+	isTestClient bool
 	httpClient *http.Client
 	instance string
 	keyId string
@@ -42,6 +39,10 @@ func NewClient(instance, keyId, keySecret, feedId string) *Client {
 
 func (client *Client) post(url string, msg interface{}) (map[string]interface{}, error) {
 
+	if client.isTestClient {
+		fmt.Println("POST:", url, msg)
+	}
+
 	request, err := sling.New().Post(url).BodyJSON(msg).Request()
 
 	request.Header.Add("Authorization", "Bearer " + client.NewToken())
@@ -54,6 +55,10 @@ func (client *Client) post(url string, msg interface{}) (map[string]interface{},
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
+	}
+
+	if client.isTestClient {
+		fmt.Println("POST RESPONSE:", string(b))
 	}
 
 	obj := make(map[string]interface{})

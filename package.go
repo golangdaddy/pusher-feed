@@ -1,16 +1,14 @@
 package pusherfeed
 
 import (
-	"fmt"
-	"net/http"
-	"io/ioutil"
-	"encoding/json"
+	"golang.org/x/net/context"
 	//
-	"github.com/dghubble/sling"
+	"github.com/golangdaddy/tarantula/httpclient"
 )
 
 const (
-	CONST_PUBLISH_ENDPOINT = "https://us1.pusherplatform.io/services/feeds/v1/%s/feeds/%s/items"
+	CONST_ENDPOINT_INSTANCE_FEEDS = "https://us1.pusherplatform.io/services/feeds/v1/%s/feeds"
+	CONST_ENDPOINT_PUBLISH = "https://us1.pusherplatform.io/services/feeds/v1/%s/feeds/%s/items"
 )
 
 type Payload struct {
@@ -18,55 +16,41 @@ type Payload struct {
 }
 
 type Client struct {
+	*httpclient.Client
 	isTestClient bool
-	httpClient *http.Client
-	instance string
+	instanceLocator string
 	keyId string
-	keySecret string
+	secretKey string
+}
+
+type Feed struct {
+	*Client
 	feedId string
 }
 
-func NewClient(instance, keyId, keySecret, feedId string) *Client {
+func NewClient(instanceLocator, keyId, secretKey string) *Client {
 
 	return &Client{
-		httpClient: &http.Client{},
-		instance: instance,
+		Client: httpclient.NewClient(),
+		instanceLocator: instanceLocator,
 		keyId: keyId,
-		keySecret: keySecret,
-		feedId: feedId,
+		secretKey: secretKey,
 	}
 }
 
-func (client *Client) post(url string, msg interface{}) (map[string]interface{}, error) {
+func NewUrlfetchClient(ctx context.Context, instanceLocator, keyId, secretKey string) *Client {
 
-	if client.isTestClient {
-		fmt.Println("POST:", url, msg)
+	return &Client{
+		Client: httpclient.NewUrlfetchClient(ctx),
+		instanceLocator: instanceLocator,
+		keyId: keyId,
+		secretKey: secretKey,
 	}
+}
 
-	request, err := sling.New().Post(url).BodyJSON(msg).Request()
-
-	request.Header.Add("Authorization", "Bearer " + client.NewToken())
-
-	resp, err := client.httpClient.Do(request)
-	if err != nil {
-		return nil, err
+func (client *Client) Feed(id string) *Feed {
+	return &Feed{
+		client,
+		id,
 	}
-
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if client.isTestClient {
-		fmt.Println("POST RESPONSE:", string(b))
-	}
-
-	obj := make(map[string]interface{})
-
-	if err := json.Unmarshal(b, &obj); err != nil {
-		fmt.Println(string(b))
-		return nil, err
-	}
-
-	return obj, nil
 }

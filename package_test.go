@@ -7,45 +7,61 @@ import (
 )
 
 var client *Client
+var feed *Feed
 
 func init() {
 
-	instance := flag.String("instance", "v1:us1:c2249ba7-ade0-0000-8864-000000dad3f6", "is a string")
-	keyId := flag.String("keyId", "87f87a37-5aba-412e-b2ee-00000c000000", "is a string")
-	keySecret := flag.String("keySecret", "6D9/ZfCKLMkgG8d1fopQIrG+OxEUhzEgS/1zvhtkUL8=", "is a string")
+	instanceLocator := flag.String("instance", "", "is a string")
+	keyId := flag.String("keyId", "", "is a string")
+	secretKey := flag.String("keySecret", "", "is a string")
 	feedId := flag.String("feedId", "myFeed", "is a string")
 
 	flag.Parse()
 
 	client = NewClient(
-		*instance,
+		*instanceLocator,
 		*keyId,
-		*keySecret,
+		*secretKey,
+	)
+	feed = client.Feed(
 		*feedId,
 	)
 
-	client.isTestClient = true
+	feed.isTestClient = true
+}
+
+func TestFeeds(t *testing.T) {
+
+	msg := map[string]interface{}{
+		"items": []interface{}{
+			map[string]interface{}{
+				"hello": "world",
+			},
+		},
+	}
+
+	list, err := client.Feeds(msg)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(list)
 }
 
 func TestPublish(t *testing.T) {
 
 	msg := map[string]interface{}{
-		"hello": "world",
+		"items": []interface{}{
+			map[string]interface{}{
+				"hello": "world",
+			},
+		},
 	}
 
-	_, err := client.Publish(msg)
+	m, err := feed.Publish(msg)
 	if err != nil {
 		panic(err)
 	}
-}
 
-func TestNewToken(t *testing.T) {
-
-	jwt := client.NewToken()
-
-	fmt.Println(jwt)
-
-	if len(jwt) == 0 {
-		t.Fail()
-	}
+	fmt.Println(m)
 }

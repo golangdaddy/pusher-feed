@@ -3,6 +3,8 @@ package pusherfeed
 import (
 	"fmt"
 	"time"
+	"encoding/base64"
+	"encoding/json"
 	//
 	"github.com/dgrijalva/jwt-go"
 )
@@ -13,7 +15,7 @@ import (
 "iat": issued_at,
 "exp": expiry_time,
 "sub": user_id,
-"feeds": {
+"clients": {
   "permission": {
 	"action": action,
 	"path": path
@@ -21,13 +23,13 @@ import (
 }
 */
 
+
 type Claims struct {
 	App string `json:"app"`
 	Iss string `json:"iss"`
 	Iat string `json:"iat"`
 	Exp string `json:"exp"`
-	Sub string `json:"sub"`
-	Feeds *Feeds `json:"feeds"`
+	Feeds *Feeds `json:"clients"`
 	jwt.StandardClaims
 }
 
@@ -42,32 +44,37 @@ type Permission struct {
 
 func (client *Client) NewToken() string {
 
-	sigKey := []byte(client.keySecret)
-
-	// Create the Claims
-	claims := Claims{
-		client.instance,
-		"api_keys/"+client.keyId,
-		fmt.Sprintf("%v", time.Now().UTC().Unix()),
-		fmt.Sprintf("%v", time.Now().UTC().Add(time.Hour).Unix()),
-		"user_id",
-		&Feeds{
-			&Permission{
-				"action",
-				"path",
-			},
-		},
-		jwt.StandardClaims{
-	        ExpiresAt: 15000,
-	        Issuer:    "test",
-	    },
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	ss, err := token.SignedString(sigKey)
+	_, err := base64.StdEncoding.DecodeString(client.secretKey)
 	if err != nil {
 		panic(err)
 	}
+
+	claims := jwt.MapClaims{
+		"app": client.instanceLocator,
+		"iss": "api_keys/"+client.keyId,
+		"iat": time.Now().UTC().Unix(),
+		"exp": time.Now().UTC().Add(24 * time.Hour).Unix(),
+		"feeds": &Feeds{
+			&Permission{
+				Action: "*",
+				Path: "*",
+			},
+		},
+	}
+
+	b, _ := json.Marshal(claims)
+	fmt.Println(string(b))
+
+	token := jwt.NewWithClaims(
+		jwt.SigningMethodHS256,
+		claims,
+	)
+	ss, err := token.SignedString([]byte(client.secretKey))
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(ss)
 
 	return ss
 }

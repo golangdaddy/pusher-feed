@@ -18,7 +18,7 @@ func (client *Client) Feeds(msg interface{}) ([]interface{}, error) {
 	return m, err
 }
 
-func (feed *Feed) Publish(msg interface{}) (map[string]interface{}, error) {
+func (feed *Feed) Publish(msgs ...interface{}) (map[string]interface{}, error) {
 
 	url := fmt.Sprintf(CONST_ENDPOINT_PUBLISH, feed.instanceLocator, feed.feedId)
 
@@ -26,8 +26,15 @@ func (feed *Feed) Publish(msg interface{}) (map[string]interface{}, error) {
 		"Authorization": "Bearer "+feed.NewToken(),
 	}
 
+	items := map[string]interface{}{
+		"items": append(
+			[]interface{}{},
+			msgs...,
+		),
+	}
+
 	m := map[string]interface{}{}
-	_, err := feed.Post(url, msg, &m, h)
+	_, err := feed.Post(url, items, &m, h)
 
 	return m, err
 }
